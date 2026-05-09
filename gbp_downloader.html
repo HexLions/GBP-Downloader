@@ -1,0 +1,1750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GBP Downloader — Game Boy Printer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* ── Game Boy DMG-01 SHELL palette (the actual console colors) ──
+       The famous gray plastic case, the purple "DOT MATRIX" stripe,
+       the magenta A/B buttons, the red POWER LED. Screen-green is
+       reserved for actual photo previews only.                       */
+
+    /* Shell grays (warm, slightly beige plastic) */
+    --shell-light:  #d3d0c4;   /* lightest plastic surface */
+    --shell:        #c4c1b4;   /* main case color */
+    --shell-mid:    #a5a299;   /* shaded plastic */
+    --shell-dark:   #878680;   /* deep shade / screen bezel surround */
+    --shell-deep:   #5a5852;   /* darkest plastic / shadow */
+    --shell-ink:    #2b2a26;   /* near-black text on shell */
+
+    /* The famous purple "DOT MATRIX WITH STEREO SOUND" stripe */
+    --stripe:       #6a3a8c;   /* deep purple */
+    --stripe-light: #9b6abf;   /* lighter purple highlight */
+
+    /* Magenta A / B buttons */
+    --magenta:      #a72f3e;
+    --magenta-2:    #c44456;
+
+    /* Power LED red */
+    --led-red:      #e63946;
+    --led-red-soft: #c5202c;
+
+    /* DMG screen color — kept ONLY for photo previews & screen glass */
+    --gb-0: #9bbc0f;
+    --gb-1: #8bac0f;
+    --gb-2: #306230;
+    --gb-3: #0f380f;
+
+    /* Surface system mapped onto shell colors */
+    --bg:        var(--shell);
+    --bg-deep:   var(--shell-mid);
+    --screen:    var(--shell-light);   /* "panel" interior — light plastic */
+    --screen-2:  var(--shell);
+    --line:      var(--shell-deep);
+    --line-soft: var(--shell-mid);
+    --ink:       var(--shell-ink);
+    --ink-mid:   var(--shell-deep);
+    --ink-dim:   #4d4b46;
+    --ink-faint: #757269;
+
+    --accent:     var(--magenta);      /* primary CTAs use the A/B button magenta */
+    --accent-2:   var(--stripe);       /* purple stripe for secondary highlights */
+    --ok:         #3a7d3a;
+    --danger:     #b03030;
+
+    --radius: 0;
+    --radius-sm: 0;
+    --shadow-1: 4px 4px 0 var(--shell-deep);
+    --shadow-2: 6px 6px 0 var(--shell-deep);
+
+    --font-display: "Press Start 2P", "JetBrains Mono", monospace;
+    --font-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-mono);
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.5;
+    /* Subtle plastic texture: tiny dots + faint horizontal noise lines */
+    background-image:
+      radial-gradient(circle at 50% 50%, rgba(0,0,0,0.05) 1px, transparent 1px),
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.02) 0 1px, transparent 1px 4px);
+    background-size: 6px 6px, 100% 4px;
+    image-rendering: pixelated;
+  }
+  ::selection { background: var(--magenta); color: #fff; }
+
+  /* ---------- Layout ---------- */
+  .shell {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 28px 24px 80px;
+  }
+
+  header.top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 14px;
+  }
+
+  /* The iconic "DOT MATRIX WITH STEREO SOUND" purple stripe */
+  .dot-matrix-stripe {
+    background: var(--stripe);
+    color: #fff;
+    padding: 6px 16px;
+    margin-bottom: 24px;
+    font-family: "Times New Roman", Georgia, serif;
+    font-style: italic;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
+    border-top: 2px solid var(--shell-ink);
+    border-bottom: 2px solid var(--shell-ink);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), inset 0 -1px 0 rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .dot-matrix-stripe .label { font-weight: 400; }
+  .dot-matrix-stripe .lines {
+    display: flex; flex-direction: column; gap: 2px;
+    flex-shrink: 0;
+  }
+  .dot-matrix-stripe .lines span {
+    display: block;
+    width: 28px; height: 2px;
+    background: #fff;
+    border-radius: 0;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  /* Tiny pixelart Game Boy mark — pure CSS, faithful to the DMG-01 shell */
+  .gb-mark {
+    width: 56px; height: 56px;
+    flex-shrink: 0;
+    background: var(--shell);
+    border: 3px solid var(--shell-deep);
+    position: relative;
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  /* The dark bezel around the screen */
+  .gb-mark .gb-screen {
+    position: absolute;
+    top: 5px; left: 5px; right: 5px; height: 26px;
+    background: var(--shell-deep);
+    border: 1px solid var(--shell-ink);
+  }
+  /* The actual green screen inside the bezel */
+  .gb-mark .gb-screen::before {
+    content: "";
+    position: absolute;
+    top: 4px; left: 7px; right: 7px; bottom: 4px;
+    background: var(--gb-0);
+    border: 1px solid var(--gb-3);
+  }
+  /* Subtle scanlines on the screen */
+  .gb-mark .gb-screen::after {
+    content: "";
+    position: absolute;
+    top: 4px; left: 7px; right: 7px; bottom: 4px;
+    background: repeating-linear-gradient(0deg, var(--gb-2) 0 1px, transparent 1px 3px);
+    opacity: 0.35;
+    pointer-events: none;
+  }
+  /* The red POWER LED above the screen */
+  .gb-mark .gb-led {
+    position: absolute;
+    top: 9px; left: 8px;
+    width: 4px; height: 4px;
+    background: var(--led-red);
+    border-radius: 50%;
+    box-shadow: 0 0 4px var(--led-red);
+    z-index: 2;
+  }
+  /* The dark D-pad */
+  .gb-mark .gb-dpad {
+    position: absolute;
+    bottom: 5px; left: 7px;
+    width: 12px; height: 12px;
+    background: var(--shell-ink);
+    clip-path: polygon(35% 0, 65% 0, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0 65%, 0 35%, 35% 35%);
+  }
+  /* The two magenta A/B buttons */
+  .gb-mark .gb-ab {
+    position: absolute;
+    bottom: 7px; right: 5px;
+    width: 18px; height: 8px;
+    display: flex; gap: 2px;
+    transform: rotate(-15deg);
+  }
+  .gb-mark .gb-ab span {
+    flex: 1;
+    background: var(--magenta);
+    border-radius: 50%;
+    border: 1px solid var(--shell-ink);
+  }
+
+  .brand h1 {
+    font-family: var(--font-display);
+    font-size: 16px;
+    margin: 0 0 6px;
+    letter-spacing: 1.5px;
+    color: var(--ink);
+    line-height: 1.2;
+    text-shadow: 2px 2px 0 var(--shell-mid);
+  }
+  .brand .sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-mid);
+    letter-spacing: 0.5px;
+  }
+  .brand .sub a {
+    color: var(--accent-2);
+    text-decoration: none;
+    border-bottom: 1px solid currentColor;
+  }
+
+  .top-actions {
+    display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  }
+
+  /* ---------- Status pill ---------- */
+  .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--ink);
+    padding: 8px 14px;
+    border: 2px solid var(--ink);
+    background: var(--screen);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: var(--shadow-1);
+  }
+  .status .led {
+    width: 10px; height: 10px;
+    background: var(--ink-faint);
+    border: 2px solid var(--ink);
+  }
+  .status.connected .led {
+    background: var(--ok);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  .status.receiving .led {
+    background: var(--accent);
+    animation: pulse 0.5s ease-in-out infinite;
+  }
+  .status.error .led { background: var(--danger); }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    --bgc: var(--screen);
+    --fg: var(--ink);
+    --bd: var(--ink);
+    appearance: none;
+    border: 2px solid var(--bd);
+    background: var(--bgc);
+    color: var(--fg);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.05s ease, box-shadow 0.05s ease;
+    user-select: none;
+    box-shadow: 3px 3px 0 var(--ink);
+  }
+  .btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 var(--ink);
+  }
+  .btn:active {
+    transform: translate(2px, 2px);
+    box-shadow: 1px 1px 0 var(--ink);
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: 3px 3px 0 var(--ink); transform: none; }
+  .btn .dot {
+    width: 8px; height: 8px;
+    background: currentColor;
+  }
+  .btn.primary {
+    --bgc: var(--accent);
+    --fg: #fff;
+    --bd: var(--ink);
+  }
+  .btn.primary:hover { --bgc: #c52e2e; }
+  .btn.danger {
+    --bgc: var(--screen);
+    --fg: var(--danger);
+    --bd: var(--danger);
+  }
+  .btn.danger:hover { --bgc: #fde2e2; }
+
+  /* ---------- Main grid ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--screen);
+    border: 3px solid var(--ink);
+    box-shadow: var(--shadow-2);
+    overflow: hidden;
+  }
+  .panel h2 {
+    font-family: var(--font-display);
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    margin: 0;
+    padding: 12px 14px;
+    color: var(--shell-light);
+    background: var(--shell-ink);
+    text-transform: uppercase;
+  }
+  .panel-body { padding: 16px; background: var(--screen); }
+
+  /* ---------- Sidebar fields ---------- */
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--ink-mid);
+    margin-bottom: 6px;
+    font-weight: 700;
+  }
+  select, input[type="text"], input[type="number"], textarea {
+    width: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    padding: 8px 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    outline: none;
+  }
+  select:focus, input:focus, textarea:focus {
+    background: #fff;
+  }
+  textarea { min-height: 90px; resize: vertical; }
+
+  /* ---------- Palette swatches ---------- */
+  .palette-row {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+  }
+  .palette-swatch {
+    cursor: pointer;
+    border: 2px solid var(--ink);
+    overflow: hidden;
+    height: 38px;
+    display: flex; flex-direction: column;
+    transition: transform 0.05s ease;
+  }
+  .palette-swatch:hover { transform: translate(-1px, -1px); box-shadow: 2px 2px 0 var(--ink); }
+  .palette-swatch.active {
+    box-shadow: 3px 3px 0 var(--accent);
+    transform: translate(-1px, -1px);
+  }
+  .palette-swatch .row { flex: 1; display: flex; }
+  .palette-swatch .row span { flex: 1; }
+  .palette-swatch .name {
+    font-family: var(--font-mono);
+    font-size: 8px;
+    text-align: center;
+    padding: 2px 0;
+    background: var(--shell-ink);
+    color: var(--shell-light);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+
+  /* ---------- Scale buttons ---------- */
+  .scale-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .scale-row button {
+    background: var(--bg);
+    border: 2px solid var(--ink);
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 8px 0;
+    cursor: pointer;
+    transition: transform 0.05s ease;
+  }
+  .scale-row button.active {
+    background: var(--shell-ink);
+    color: var(--shell-light);
+  }
+  .scale-row button:hover { transform: translate(-1px, -1px); box-shadow: 2px 2px 0 var(--ink); }
+  .scale-row button.active:hover { box-shadow: 2px 2px 0 var(--shell-deep); }
+
+  /* ---------- Stats ---------- */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    border: 2px solid var(--ink);
+  }
+  .stat {
+    background: var(--bg);
+    padding: 10px 12px;
+    border-right: 2px solid var(--ink);
+    border-bottom: 2px solid var(--ink);
+  }
+  .stat:nth-child(2n) { border-right: none; }
+  .stat:nth-last-child(-n+2) { border-bottom: none; }
+  .stat .k {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--ink-mid);
+    font-weight: 700;
+  }
+  .stat .v {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--ink);
+    margin-top: 4px;
+  }
+
+  /* ---------- Switches ---------- */
+  .switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px dashed var(--line-soft);
+  }
+  .switch-row:last-child { border-bottom: none; }
+  .switch-row .label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+  }
+  .switch-row .hint {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--ink-faint);
+    margin-top: 2px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+  .switch {
+    position: relative;
+    width: 44px;
+    height: 22px;
+    background: var(--bg-deep);
+    border: 2px solid var(--ink);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .switch::after {
+    content: "";
+    position: absolute;
+    top: 1px; left: 1px;
+    width: 16px; height: 16px;
+    background: var(--ink);
+    transition: transform 0.15s ease, background 0.15s ease;
+  }
+  .switch.on { background: var(--ok); }
+  .switch.on::after {
+    transform: translateX(20px);
+    background: var(--shell-light);
+  }
+
+  /* ---------- Gallery ---------- */
+  /* Header styled after the iconic "DOT MATRIX WITH STEREO SOUND" purple stripe */
+  .gallery-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+    padding: 12px 14px;
+    background: var(--stripe);
+    border-bottom: 2px solid var(--shell-ink);
+  }
+  .gallery-head h2 {
+    font-family: var(--font-display);
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    margin: 0;
+    color: #fff;
+    text-transform: uppercase;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.4);
+  }
+  .gallery-head h2 span { color: var(--stripe-light); margin-left: 6px; }
+  .gallery-head .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .gallery-head .btn {
+    background: var(--shell-light);
+    color: var(--ink);
+    border-color: var(--shell-ink);
+    box-shadow: 2px 2px 0 var(--shell-ink);
+  }
+  .gallery-head .btn:hover { box-shadow: 3px 3px 0 var(--shell-ink); }
+  .gallery-head .btn.danger {
+    background: var(--shell-light);
+    color: var(--danger);
+    border-color: var(--danger);
+    box-shadow: 2px 2px 0 var(--danger);
+  }
+  .gallery-head .btn.danger:hover { box-shadow: 3px 3px 0 var(--danger); }
+
+  .gallery {
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 14px;
+    min-height: 320px;
+  }
+  .empty {
+    grid-column: 1 / -1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 50px 20px;
+    text-align: center;
+    color: var(--ink-mid);
+  }
+  .empty .ascii {
+    font-family: var(--font-mono);
+    white-space: pre;
+    font-size: 12px;
+    line-height: 1.3;
+    color: var(--ink);
+    margin-bottom: 18px;
+    font-weight: 700;
+  }
+  .empty p {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    max-width: 380px;
+    margin: 4px 0;
+    color: var(--ink-mid);
+  }
+  .empty p.hint { color: var(--ink-faint); font-size: 11px; }
+
+  .card {
+    background: var(--bg);
+    border: 2px solid var(--ink);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+    box-shadow: 3px 3px 0 var(--ink);
+    animation: pop-in 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes pop-in {
+    from { transform: translateY(8px) scale(0.96); opacity: 0; }
+    to   { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  .card:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+  .card .img-wrap {
+    background: var(--gb-0);   /* The photo IS the screen — keep it green */
+    padding: 10px;
+    display: flex; align-items: center; justify-content: center;
+    aspect-ratio: 160 / 144;
+    border-bottom: 2px solid var(--ink);
+  }
+  .card canvas, .card img {
+    image-rendering: pixelated;
+    image-rendering: -moz-crisp-edges;
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+  .card .meta {
+    padding: 6px 8px;
+    background: var(--shell-ink);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 6px;
+  }
+  .card .meta .name {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--shell-light);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    font-weight: 700;
+  }
+  .card .meta-actions { display: flex; gap: 2px; }
+  .icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--shell-mid);
+    width: 22px; height: 22px;
+    display: grid; place-items: center;
+    cursor: pointer;
+    transition: color 0.1s ease, background 0.1s ease;
+  }
+  .icon-btn:hover { color: var(--shell-light); background: var(--shell-deep); }
+  .icon-btn.del:hover { color: var(--led-red); background: rgba(230, 57, 70, 0.18); }
+  .icon-btn svg { width: 13px; height: 13px; }
+
+  /* ---------- Console / Log ---------- */
+  details.console {
+    margin-top: 24px;
+    background: var(--screen);
+    border: 3px solid var(--ink);
+    box-shadow: var(--shadow-1);
+  }
+  details.console summary {
+    padding: 12px 14px;
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    color: var(--shell-light);
+    background: var(--shell-ink);
+    list-style: none;
+    display: flex; align-items: center; justify-content: space-between;
+    user-select: none;
+    text-transform: uppercase;
+  }
+  details.console summary::-webkit-details-marker { display: none; }
+  details.console summary::after {
+    content: "[+]";
+    font-family: var(--font-mono);
+    color: var(--shell-mid);
+  }
+  details.console[open] summary::after { content: "[-]"; }
+
+  /* The serial log is a retro terminal — keep the green-on-dark aesthetic */
+  .log {
+    padding: 12px 14px;
+    background: #1a1a1a;
+    color: var(--gb-0);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    max-height: 240px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .log .line { padding: 1px 0; }
+  .log .line.err { color: #ff8a8a; }
+  .log .line.ok { color: var(--gb-0); font-weight: 700; }
+  .log .line.info { color: #c4dc7a; }
+  .log .ts { color: var(--gb-2); margin-right: 6px; }
+
+  /* ---------- Modal ---------- */
+  .modal {
+    position: fixed; inset: 0;
+    background: rgba(43, 42, 38, 0.92);   /* shell-ink with alpha */
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 100;
+    padding: 30px;
+  }
+  .modal.show { display: flex; }
+  .modal-content {
+    max-width: min(90vw, 800px);
+    max-height: 90vh;
+    background: var(--screen);
+    border: 4px solid var(--ink);
+    box-shadow: 8px 8px 0 var(--shell-deep);
+    display: flex; flex-direction: column;
+  }
+  .modal-head {
+    padding: 12px 14px;
+    background: var(--shell-ink);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .modal-head h3 {
+    font-family: var(--font-mono); font-size: 12px;
+    margin: 0; color: var(--shell-light); font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .modal-img {
+    background: var(--gb-0);   /* Photo IS the green screen */
+    padding: 24px;
+    flex: 1;
+    display: flex; align-items: center; justify-content: center;
+    overflow: auto;
+  }
+  .modal-img canvas, .modal-img img { image-rendering: pixelated; max-width: 100%; max-height: 100%; }
+  .modal-actions {
+    padding: 14px;
+    background: var(--bg);
+    border-top: 2px solid var(--ink);
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+
+  /* ---------- Toasts ---------- */
+  .toasts {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    z-index: 200;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast {
+    background: var(--screen);
+    border: 2px solid var(--ink);
+    padding: 10px 14px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink);
+    box-shadow: 4px 4px 0 var(--ink);
+    animation: slide-in 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    max-width: 320px;
+    font-weight: 700;
+  }
+  .toast.ok { border-color: var(--ok); border-left-width: 6px; }
+  .toast.err { border-color: var(--danger); border-left-width: 6px; }
+  .toast.info { border-color: var(--accent-2); border-left-width: 6px; }
+  @keyframes slide-in {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* ---------- Footer & nav links ---------- */
+  footer {
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 3px solid var(--ink);
+    text-align: center;
+    color: var(--ink-mid);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+  footer .nav-links {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  footer .nav-links a {
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 2px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    font-size: 11px;
+  }
+  footer .nav-links a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* Drop overlay */
+  .drop-overlay {
+    position: fixed; inset: 0;
+    background: rgba(43, 42, 38, 0.4);
+    border: 6px dashed var(--ink);
+    z-index: 50;
+    display: none;
+    align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .drop-overlay.show { display: flex; }
+  .drop-overlay span {
+    font-family: var(--font-display);
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--shell-light);
+    padding: 18px 28px;
+    border: 4px solid var(--ink);
+    box-shadow: 6px 6px 0 var(--shell-deep);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  /* No-Web-Serial banner */
+  .banner {
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    background: var(--shell-light);
+    border: 3px solid var(--accent);
+    border-left-width: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink);
+    display: none;
+    font-weight: 700;
+  }
+  .banner.show { display: block; }
+  .banner b { color: var(--accent); }
+  .banner a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 2px solid currentColor;
+  }
+
+  /* Big "PRESS PRINT" call-to-action below empty state */
+  .press-print {
+    font-family: var(--font-display);
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 14px;
+    letter-spacing: 1.5px;
+    animation: blink 1.6s steps(2, start) infinite;
+  }
+  @keyframes blink {
+    to { visibility: hidden; }
+  }
+</style>
+</head>
+<body>
+
+<div class="drop-overlay" id="dropOverlay"><span>DROP HEX FILE</span></div>
+
+<div class="shell">
+  <header class="top">
+    <div class="brand">
+      <div class="gb-mark">
+        <div class="gb-screen"></div>
+        <div class="gb-led"></div>
+        <div class="gb-dpad"></div>
+        <div class="gb-ab"><span></span><span></span></div>
+      </div>
+      <div>
+        <h1>GBP DOWNLOAD</h1>
+        <div class="sub">Game Boy Printer photo receiver · </div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <span class="status" id="status"><span class="led"></span><span id="statusText">DISCONNECTED</span></span>
+    </div>
+  </header>
+
+  <div class="dot-matrix-stripe">
+    <span class="label">DOT MATRIX WITH STEREO SOUND</span>
+    <div class="lines"><span></span><span></span><span></span></div>
+  </div>
+
+  <div class="banner" id="serialBanner">
+    Web Serial not supported. Use <b>Chrome</b>, <b>Edge</b> or <b>Opera</b> on desktop, or paste raw hex packets manually below.
+  </div>
+
+  <div class="grid">
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside>
+      <section class="panel">
+        <h2>Connection</h2>
+        <div class="panel-body">
+          <div class="field">
+            <button class="btn primary" id="btnConnect" style="width: 100%;">
+              <span class="dot"></span> CONNECT TO ARDUINO
+            </button>
+          </div>
+          <div class="field">
+            <label>Baud rate</label>
+            <select id="baudRate">
+              <option value="115200" selected>115200 (default)</option>
+              <option value="57600">57600</option>
+              <option value="9600">9600</option>
+            </select>
+          </div>
+          <div class="switch-row">
+            <div>
+              <div class="label">Auto-connect</div>
+              <div class="hint">remember &amp; reconnect on plug</div>
+            </div>
+            <div class="switch on" id="swAutoConnect" role="switch"></div>
+          </div>
+          <div class="switch-row">
+            <div>
+              <div class="label">Auto-download</div>
+              <div class="hint">save PNG instantly on print</div>
+            </div>
+            <div class="switch" id="swAutoDownload" role="switch"></div>
+          </div>
+          <div class="switch-row">
+            <div>
+              <div class="label">Shutter sound</div>
+              <div class="hint">camera-click on photo</div>
+            </div>
+            <div class="switch on" id="swSound" role="switch"></div>
+          </div>
+          <div class="stats" style="margin-top: 14px;">
+            <div class="stat"><div class="k">Bytes</div><div class="v" id="statBytes">0</div></div>
+            <div class="stat"><div class="k">Packets</div><div class="v" id="statPackets">0</div></div>
+            <div class="stat"><div class="k">Tiles</div><div class="v" id="statTiles">0</div></div>
+            <div class="stat"><div class="k">Photos</div><div class="v" id="statImages">0</div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top: 20px;">
+        <h2>Render Settings</h2>
+        <div class="panel-body">
+          <div class="field">
+            <label>Palette</label>
+            <div class="palette-row" id="paletteRow"></div>
+          </div>
+          <div class="field">
+            <label>Export scale</label>
+            <div class="scale-row" id="scaleRow">
+              <button data-scale="1" class="active">1×</button>
+              <button data-scale="2">2×</button>
+              <button data-scale="4">4×</button>
+              <button data-scale="8">8×</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top: 20px;">
+        <h2>Manual Input</h2>
+        <div class="panel-body">
+          <div class="field">
+            <label>Paste raw hex (V3 format)</label>
+            <textarea id="hexInput" placeholder="// GAMEBOY PRINTER Packet Capture
+88 33 01 00 ..."></textarea>
+          </div>
+          <div class="field" style="display: flex; gap: 6px;">
+            <button class="btn" id="btnDecodeHex" style="flex: 1;">DECODE</button>
+            <button class="btn" id="btnLoadFile">LOAD</button>
+            <input type="file" id="fileInput" accept=".txt,.hex,.log" style="display:none">
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- ============ GALLERY ============ -->
+    <main>
+      <section class="panel">
+        <div class="gallery-head">
+          <h2>Photo Gallery <span id="galleryCount">(0)</span></h2>
+          <div class="actions">
+            <button class="btn" id="btnDownloadAll" disabled>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              ZIP ALL
+            </button>
+            <button class="btn danger" id="btnClearAll" disabled>CLEAR</button>
+          </div>
+        </div>
+        <div class="gallery" id="gallery">
+          <div class="empty" id="emptyState">
+            <div class="ascii">┌──────────────┐
+│  ░░░░░░░░░░  │
+│  ░ NO PHOTO  │
+│  ░ RECEIVED  │
+│  ░░░░░░░░░░  │
+│              │
+│  ▓▓ ▓▓  ◊ ◊  │
+└──────────────┘</div>
+            <p>Connect your Arduino,<br>then press print on your Game Boy.</p>
+            <div class="press-print">► PRESS PRINT</div>
+          </div>
+        </div>
+      </section>
+
+      <details class="console" id="consoleDetails">
+        <summary>Serial Console</summary>
+        <div class="log" id="log"></div>
+      </details>
+    </main>
+  </div>
+
+  <footer>
+    <div>GBP Downloader · single-page · works fully offline · v1.0</div>
+  </footer>
+</div>
+
+<!-- Lightbox modal -->
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <div class="modal-head">
+      <h3 id="modalTitle">Photo</h3>
+      <button class="icon-btn" id="modalClose" title="Close" style="color: var(--shell-light); width: 28px; height: 28px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-img" id="modalImg"></div>
+    <div class="modal-actions">
+      <button class="btn primary" id="modalDownloadPng">DOWNLOAD PNG</button>
+      <button class="btn" id="modalCopyHex">COPY RAW HEX</button>
+      <button class="btn danger" id="modalDelete">DELETE</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* =========================================================================
+   GBP DOWNLOAD — receives photos from the Arduino Game Boy Printer Emulator,
+   decodes the V3 raw packet stream, and renders them as classic DMG images.
+   
+   ========================================================================= */
+
+// ---------- Persisted settings ----------
+const SETTINGS_KEY = 'gbp_download_settings_v1';
+const settings = (() => {
+  const defaults = {
+    autoConnect: true, autoDownload: false, sound: true,
+    palette: 'bgb', scale: 1, baud: '115200',
+  };
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) return Object.assign(defaults, JSON.parse(raw));
+  } catch (_) {}
+  return defaults;
+})();
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch (_) {}
+}
+function bindSwitch(elId, key, onChange) {
+  const el = document.getElementById(elId);
+  function render() { el.classList.toggle('on', !!settings[key]); el.setAttribute('aria-checked', settings[key] ? 'true' : 'false'); }
+  el.addEventListener('click', () => { settings[key] = !settings[key]; saveSettings(); render(); if (onChange) onChange(settings[key]); });
+  render();
+}
+
+// ---------- Logging ----------
+const logEl = document.getElementById('log');
+function log(msg, kind = '') {
+  const ts = new Date().toLocaleTimeString();
+  const line = document.createElement('div');
+  line.className = 'line ' + kind;
+  line.innerHTML = `<span class="ts">[${ts}]</span>${msg}`;
+  logEl.appendChild(line);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// ---------- Toasts ----------
+const toastsEl = document.getElementById('toasts');
+function toast(msg, kind = 'info', ms = 2400) {
+  const el = document.createElement('div');
+  el.className = `toast ${kind}`;
+  el.textContent = msg;
+  toastsEl.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = 'opacity 0.25s, transform 0.25s';
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(20px)';
+    setTimeout(() => el.remove(), 260);
+  }, ms);
+}
+
+// ---------- Palettes (light → dark, 4 shades) ----------
+const PALETTES = {
+  dmg:    { name: 'DMG',     colors: ['#9bbc0f', '#8bac0f', '#306230', '#0f380f'] },
+  bw:     { name: 'BW',      colors: ['#ffffff', '#aaaaaa', '#555555', '#000000'] },
+  pocket: { name: 'POCKET',  colors: ['#c4cfa1', '#8b956d', '#4d533c', '#1f1f1f'] },
+  bgb:    { name: 'BGB',     colors: ['#e0f8d0', '#88c070', '#346856', '#081820'] },
+  sepia:  { name: 'SEPIA',   colors: ['#fff4e0', '#d6b48c', '#8b5a2b', '#3a1f0a'] },
+  noir:   { name: 'NOIR',    colors: ['#f4d35e', '#ee964b', '#9c1d1d', '#1d201f'] },
+  ice:    { name: 'ICE',     colors: ['#eaf6ff', '#87ceeb', '#3b6ea5', '#0a1f3a'] },
+  burn:   { name: 'BURN',    colors: ['#ffefb0', '#ff7a59', '#7a1f1f', '#1a0d0d'] },
+};
+
+let activePalette = settings.palette;
+let activeScale = settings.scale;
+
+const paletteRow = document.getElementById('paletteRow');
+function renderPaletteSwatches() {
+  paletteRow.innerHTML = '';
+  Object.entries(PALETTES).forEach(([key, p]) => {
+    const sw = document.createElement('div');
+    sw.className = 'palette-swatch' + (key === activePalette ? ' active' : '');
+    sw.title = p.name;
+    sw.innerHTML = `<div class="row">${p.colors.map(c => `<span style="background:${c}"></span>`).join('')}</div><div class="name">${p.name}</div>`;
+    sw.addEventListener('click', () => {
+      activePalette = key; settings.palette = key; saveSettings();
+      renderPaletteSwatches(); rerenderAllImages();
+    });
+    paletteRow.appendChild(sw);
+  });
+}
+renderPaletteSwatches();
+
+document.getElementById('scaleRow').addEventListener('click', (e) => {
+  if (e.target.tagName === 'BUTTON') {
+    document.querySelectorAll('#scaleRow button').forEach(b => b.classList.remove('active'));
+    e.target.classList.add('active');
+    activeScale = parseInt(e.target.dataset.scale, 10);
+    settings.scale = activeScale; saveSettings();
+  }
+});
+(() => {
+  document.querySelectorAll('#scaleRow button').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.scale, 10) === activeScale);
+  });
+})();
+
+// ---------- Stats ----------
+const stats = { bytes: 0, packets: 0, tiles: 0, images: 0 };
+function updateStats() {
+  document.getElementById('statBytes').textContent = stats.bytes.toLocaleString();
+  document.getElementById('statPackets').textContent = stats.packets;
+  document.getElementById('statTiles').textContent = stats.tiles;
+  document.getElementById('statImages').textContent = stats.images;
+}
+
+// ---------- Status ----------
+const statusEl = document.getElementById('status');
+const statusText = document.getElementById('statusText');
+function setStatus(state, text) {
+  statusEl.classList.remove('connected', 'receiving', 'error');
+  if (state) statusEl.classList.add(state);
+  statusText.textContent = text;
+}
+
+/* =========================================================================
+   GAME BOY PRINTER PACKET DECODER (V3 raw stream)
+     88 33 CMD COMP LEN_L LEN_H [data...] CKSUM_L CKSUM_H DEV_ID STATUS
+   Commands: 0x01 INIT, 0x02 PRINT, 0x04 DATA, 0x0F INQUIRY
+   Compression: 0=none, 1=RLE
+   ========================================================================= */
+
+const CMD = { INIT: 0x01, PRINT: 0x02, DATA: 0x04, INQUIRY: 0x0F };
+
+let serialBuffer = '';
+let byteStream = [];
+let tileBuffer = [];
+
+function hexToBytes(hexStr) {
+  const clean = hexStr.split('\n').map(l => l.replace(/(#|\/\/).*$/, '')).join(' ').replace(/[^0-9a-fA-F\s]/g, '').trim();
+  const tokens = clean.split(/\s+/).filter(Boolean);
+  const out = new Uint8Array(tokens.length);
+  for (let i = 0; i < tokens.length; i++) out[i] = parseInt(tokens[i], 16) & 0xFF;
+  return out;
+}
+
+function rleDecompress(input) {
+  const out = [];
+  let i = 0;
+  while (i < input.length) {
+    const ctrl = input[i++];
+    if (ctrl & 0x80) {
+      const runLen = (ctrl & 0x7F) + 2;
+      const v = input[i++];
+      for (let j = 0; j < runLen; j++) out.push(v);
+    } else {
+      const litLen = ctrl + 1;
+      for (let j = 0; j < litLen; j++) {
+        if (i < input.length) out.push(input[i++]);
+      }
+    }
+  }
+  return out;
+}
+
+function parsePacketsFromBytes(bytes) {
+  let i = 0;
+  while (i < bytes.length - 9) {
+    if (bytes[i] !== 0x88 || bytes[i + 1] !== 0x33) { i++; continue; }
+    const command = bytes[i + 2];
+    const compress = bytes[i + 3];
+    const dataLen = bytes[i + 4] | (bytes[i + 5] << 8);
+    const headerLen = 6;
+    const tailLen = 4;
+    if (i + headerLen + dataLen + tailLen > bytes.length) break;
+
+    const payloadRaw = bytes.slice(i + headerLen, i + headerLen + dataLen);
+    let payload = Array.from(payloadRaw);
+    if (compress === 1) {
+      try { payload = rleDecompress(payload); } catch (e) { log('RLE error: ' + e.message, 'err'); }
+    }
+    handlePacket(command, payload);
+    stats.packets++;
+    i += headerLen + dataLen + tailLen;
+  }
+  return Array.from(bytes.slice(i));
+}
+
+function handlePacket(command, payload) {
+  switch (command) {
+    case CMD.INIT:
+      log('INIT packet', 'info');
+      break;
+    case CMD.DATA:
+      if (payload.length === 0) {
+        log('DATA (empty / EOT marker)', 'info');
+        break;
+      }
+      for (let j = 0; j < payload.length; j += 16) {
+        const tile = payload.slice(j, j + 16);
+        if (tile.length === 16) { tileBuffer.push(tile); stats.tiles++; }
+      }
+      log(`DATA · ${payload.length}B · tiles ${tileBuffer.length}`);
+      break;
+    case CMD.PRINT:
+      if (tileBuffer.length > 0) { finalizeImage(tileBuffer); tileBuffer = []; }
+      else log('PRINT received but no tiles buffered', 'err');
+      break;
+    case CMD.INQUIRY: break;
+    default: log(`Unknown command 0x${command.toString(16)}`, 'err');
+  }
+  updateStats();
+}
+
+/* =========================================================================
+   IMAGE FINALIZATION & RENDERING
+   160px wide, tiles 8×8 in 20-tile bands × 8 px tall.
+   ========================================================================= */
+
+function tilesToImageData(tiles) {
+  const width = 160;
+  const tilesPerRow = 20;
+  const totalTiles = Math.floor(tiles.length / tilesPerRow) * tilesPerRow;
+  const rows = totalTiles / tilesPerRow;
+  const height = rows * 8;
+  const idx = new Uint8Array(width * height);
+  for (let t = 0; t < totalTiles; t++) {
+    const tile = tiles[t];
+    const tileX = (t % tilesPerRow) * 8;
+    const tileY = Math.floor(t / tilesPerRow) * 8;
+    for (let y = 0; y < 8; y++) {
+      const lo = tile[y * 2], hi = tile[y * 2 + 1];
+      for (let x = 0; x < 8; x++) {
+        const bit = 7 - x;
+        idx[(tileY + y) * width + (tileX + x)] = (((hi >> bit) & 1) << 1) | ((lo >> bit) & 1);
+      }
+    }
+  }
+  return { width, height, idx };
+}
+
+function indexToCanvas(imgData, palette, scale = 1) {
+  const { width, height, idx } = imgData;
+  const cvs = document.createElement('canvas');
+  cvs.width = width * scale; cvs.height = height * scale;
+  const ctx = cvs.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  const tmp = document.createElement('canvas');
+  tmp.width = width; tmp.height = height;
+  const tctx = tmp.getContext('2d');
+  const im = tctx.createImageData(width, height);
+  const colors = palette.colors.map(hexToRgb);
+  for (let p = 0; p < idx.length; p++) {
+    const c = colors[idx[p]];
+    im.data[p * 4] = c[0]; im.data[p * 4 + 1] = c[1]; im.data[p * 4 + 2] = c[2]; im.data[p * 4 + 3] = 255;
+  }
+  tctx.putImageData(im, 0, 0);
+  ctx.drawImage(tmp, 0, 0, cvs.width, cvs.height);
+  return cvs;
+}
+
+function hexToRgb(h) {
+  const s = h.replace('#', '');
+  return [parseInt(s.substr(0, 2), 16), parseInt(s.substr(2, 2), 16), parseInt(s.substr(4, 2), 16)];
+}
+
+const images = [];
+
+function finalizeImage(tiles) {
+  const tilesCopy = tiles.map(t => Array.from(t));
+  const imgData = tilesToImageData(tilesCopy);
+  if (imgData.height === 0) { log('PRINT received but no complete tile rows', 'err'); return; }
+  const id = 'img_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  const entry = { id, ts: new Date(), imgData, rawTiles: tilesCopy };
+  images.unshift(entry);
+  stats.images++;
+  updateStats();
+  renderGallery();
+  log(`✓ Image · ${imgData.width}×${imgData.height} · ${tilesCopy.length} tiles`, 'ok');
+  toast(`Photo received (${imgData.width}×${imgData.height})`, 'ok');
+  if (settings.sound) playShutter();
+  if (settings.autoDownload) setTimeout(() => downloadEntry(entry), 50);
+}
+
+let _audioCtx = null;
+function playShutter() {
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = _audioCtx;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(880, now);
+    osc.frequency.exponentialRampToValueAtTime(220, now + 0.12);
+    gain.gain.setValueAtTime(0.0, now);
+    gain.gain.linearRampToValueAtTime(0.12, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.2);
+  } catch (_) {}
+}
+
+const galleryEl = document.getElementById('gallery');
+const emptyState = document.getElementById('emptyState');
+const galleryCount = document.getElementById('galleryCount');
+const btnDownloadAll = document.getElementById('btnDownloadAll');
+const btnClearAll = document.getElementById('btnClearAll');
+
+function renderGallery() {
+  galleryEl.innerHTML = '';
+  galleryCount.textContent = `(${images.length})`;
+  if (images.length === 0) {
+    galleryEl.appendChild(emptyState);
+    btnDownloadAll.disabled = true; btnClearAll.disabled = true;
+    return;
+  }
+  btnDownloadAll.disabled = false; btnClearAll.disabled = false;
+
+  images.forEach(entry => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const cvs = indexToCanvas(entry.imgData, PALETTES[activePalette], 1);
+    const wrap = document.createElement('div');
+    wrap.className = 'img-wrap';
+    wrap.appendChild(cvs);
+    wrap.style.background = PALETTES[activePalette].colors[0];
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const t = entry.ts;
+    const filename = `gb_${t.getFullYear()}${pad(t.getMonth() + 1)}${pad(t.getDate())}_${pad(t.getHours())}${pad(t.getMinutes())}${pad(t.getSeconds())}`;
+    meta.innerHTML = `
+      <div class="name" title="${filename}">${filename}</div>
+      <div class="meta-actions">
+        <button class="icon-btn" data-act="open" title="View">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button class="icon-btn" data-act="download" title="Download PNG">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        </button>
+        <button class="icon-btn del" data-act="delete" title="Delete">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </button>
+      </div>`;
+
+    card.appendChild(wrap); card.appendChild(meta);
+    card.querySelector('[data-act="open"]').addEventListener('click', e => { e.stopPropagation(); openModal(entry); });
+    card.querySelector('[data-act="download"]').addEventListener('click', e => { e.stopPropagation(); downloadEntry(entry); });
+    card.querySelector('[data-act="delete"]').addEventListener('click', e => { e.stopPropagation(); deleteEntry(entry.id); });
+    wrap.addEventListener('click', () => openModal(entry));
+    galleryEl.appendChild(card);
+  });
+}
+
+function pad(n) { return n.toString().padStart(2, '0'); }
+function rerenderAllImages() { if (images.length > 0) renderGallery(); }
+function deleteEntry(id) {
+  const i = images.findIndex(e => e.id === id);
+  if (i >= 0) {
+    images.splice(i, 1); stats.images = images.length; updateStats(); renderGallery();
+    toast('Photo deleted', 'info');
+  }
+}
+function downloadEntry(entry) {
+  const cvs = indexToCanvas(entry.imgData, PALETTES[activePalette], activeScale);
+  cvs.toBlob(blob => {
+    const t = entry.ts;
+    const fn = `gb_${t.getFullYear()}${pad(t.getMonth() + 1)}${pad(t.getDate())}_${pad(t.getHours())}${pad(t.getMinutes())}${pad(t.getSeconds())}_${PALETTES[activePalette].name.toLowerCase()}_${activeScale}x.png`;
+    triggerDownload(blob, fn);
+  }, 'image/png');
+}
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+/* =========================================================================
+   ZIP WRITER (store-only, no external dependencies)
+   ========================================================================= */
+const crcTable = (() => {
+  const t = new Uint32Array(256);
+  for (let i = 0; i < 256; i++) {
+    let c = i;
+    for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+    t[i] = c >>> 0;
+  }
+  return t;
+})();
+function crc32(buf) {
+  let c = 0xFFFFFFFF;
+  for (let i = 0; i < buf.length; i++) c = crcTable[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+function buildZip(files) {
+  const enc = new TextEncoder();
+  const localParts = [], centralParts = [];
+  let offset = 0;
+  const d = new Date();
+  const dosTime = ((d.getHours() & 0x1F) << 11) | ((d.getMinutes() & 0x3F) << 5) | ((d.getSeconds() >>> 1) & 0x1F);
+  const dosDate = (((d.getFullYear() - 1980) & 0x7F) << 9) | (((d.getMonth() + 1) & 0x0F) << 5) | (d.getDate() & 0x1F);
+  for (const f of files) {
+    const nameBytes = enc.encode(f.name);
+    const crc = crc32(f.data);
+    const size = f.data.length;
+    const local = new Uint8Array(30 + nameBytes.length + size);
+    const dv = new DataView(local.buffer);
+    dv.setUint32(0, 0x04034b50, true);
+    dv.setUint16(4, 20, true); dv.setUint16(6, 0, true); dv.setUint16(8, 0, true);
+    dv.setUint16(10, dosTime, true); dv.setUint16(12, dosDate, true);
+    dv.setUint32(14, crc, true); dv.setUint32(18, size, true); dv.setUint32(22, size, true);
+    dv.setUint16(26, nameBytes.length, true); dv.setUint16(28, 0, true);
+    local.set(nameBytes, 30); local.set(f.data, 30 + nameBytes.length);
+    localParts.push(local);
+    const central = new Uint8Array(46 + nameBytes.length);
+    const cv = new DataView(central.buffer);
+    cv.setUint32(0, 0x02014b50, true);
+    cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+    cv.setUint16(8, 0, true); cv.setUint16(10, 0, true);
+    cv.setUint16(12, dosTime, true); cv.setUint16(14, dosDate, true);
+    cv.setUint32(16, crc, true); cv.setUint32(20, size, true); cv.setUint32(24, size, true);
+    cv.setUint16(28, nameBytes.length, true);
+    cv.setUint16(30, 0, true); cv.setUint16(32, 0, true); cv.setUint16(34, 0, true); cv.setUint16(36, 0, true);
+    cv.setUint32(38, 0, true); cv.setUint32(42, offset, true);
+    central.set(nameBytes, 46);
+    centralParts.push(central);
+    offset += local.length;
+  }
+  const centralSize = centralParts.reduce((s, c) => s + c.length, 0);
+  const eocd = new Uint8Array(22);
+  const ev = new DataView(eocd.buffer);
+  ev.setUint32(0, 0x06054b50, true);
+  ev.setUint16(4, 0, true); ev.setUint16(6, 0, true);
+  ev.setUint16(8, files.length, true); ev.setUint16(10, files.length, true);
+  ev.setUint32(12, centralSize, true); ev.setUint32(16, offset, true);
+  ev.setUint16(20, 0, true);
+  const total = offset + centralSize + eocd.length;
+  const out = new Uint8Array(total);
+  let p = 0;
+  for (const part of localParts) { out.set(part, p); p += part.length; }
+  for (const part of centralParts) { out.set(part, p); p += part.length; }
+  out.set(eocd, p);
+  return out;
+}
+
+async function downloadAllAsZip() {
+  if (images.length === 0) return;
+  toast(`Building ZIP with ${images.length} photos…`, 'info');
+  const files = [];
+  for (const entry of images) {
+    const cvs = indexToCanvas(entry.imgData, PALETTES[activePalette], activeScale);
+    const blob = await new Promise(res => cvs.toBlob(res, 'image/png'));
+    const buf = new Uint8Array(await blob.arrayBuffer());
+    const t = entry.ts;
+    const fn = `gb_${t.getFullYear()}${pad(t.getMonth() + 1)}${pad(t.getDate())}_${pad(t.getHours())}${pad(t.getMinutes())}${pad(t.getSeconds())}.png`;
+    files.push({ name: fn, data: buf });
+  }
+  const zip = buildZip(files);
+  const blob = new Blob([zip], { type: 'application/zip' });
+  const ts = new Date();
+  triggerDownload(blob, `gameboy_photos_${ts.getFullYear()}${pad(ts.getMonth() + 1)}${pad(ts.getDate())}.zip`);
+  toast('ZIP downloaded', 'ok');
+}
+
+btnDownloadAll.addEventListener('click', downloadAllAsZip);
+btnClearAll.addEventListener('click', () => {
+  if (images.length === 0) return;
+  if (confirm(`Delete all ${images.length} photos?`)) {
+    images.length = 0; stats.images = 0; updateStats(); renderGallery();
+    toast('Gallery cleared', 'info');
+  }
+});
+
+/* =========================================================================
+   MODAL
+   ========================================================================= */
+const modal = document.getElementById('modal');
+const modalImg = document.getElementById('modalImg');
+const modalTitle = document.getElementById('modalTitle');
+let currentModalEntry = null;
+
+function openModal(entry) {
+  currentModalEntry = entry;
+  const cvs = indexToCanvas(entry.imgData, PALETTES[activePalette], 4);
+  modalImg.innerHTML = '';
+  modalImg.appendChild(cvs);
+  modalImg.style.background = PALETTES[activePalette].colors[0];
+  const t = entry.ts;
+  modalTitle.textContent = `gb_${t.getFullYear()}${pad(t.getMonth() + 1)}${pad(t.getDate())}_${pad(t.getHours())}${pad(t.getMinutes())}${pad(t.getSeconds())} · ${entry.imgData.width}×${entry.imgData.height}`;
+  modal.classList.add('show');
+}
+document.getElementById('modalClose').addEventListener('click', () => modal.classList.remove('show'));
+modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') modal.classList.remove('show'); });
+document.getElementById('modalDownloadPng').addEventListener('click', () => { if (currentModalEntry) downloadEntry(currentModalEntry); });
+document.getElementById('modalDelete').addEventListener('click', () => {
+  if (currentModalEntry) { deleteEntry(currentModalEntry.id); modal.classList.remove('show'); }
+});
+document.getElementById('modalCopyHex').addEventListener('click', () => {
+  if (!currentModalEntry) return;
+  const hex = currentModalEntry.rawTiles.map(t => t.map(b => b.toString(16).padStart(2, '0')).join(' ')).join('\n');
+  navigator.clipboard.writeText(hex).then(() => toast('Hex copied', 'ok'), () => toast('Copy failed', 'err'));
+});
+
+/* =========================================================================
+   WEB SERIAL — connect, auto-reconnect, read loop
+   ========================================================================= */
+
+// Common Arduino & USB-serial chip vendor IDs.
+// Used to filter the browser's port-picker so only relevant boards appear.
+const ARDUINO_USB_FILTERS = [
+  { usbVendorId: 0x2341 }, // Arduino LLC
+  { usbVendorId: 0x2A03 }, // Arduino SA
+  { usbVendorId: 0x1A86 }, // QinHeng CH340 / CH341 (most clones)
+  { usbVendorId: 0x0403 }, // FTDI (older Nanos)
+  { usbVendorId: 0x10C4 }, // Silicon Labs CP210x
+  { usbVendorId: 0x239A }, // Adafruit
+  { usbVendorId: 0x1B4F }, // SparkFun
+  { usbVendorId: 0x16C0 }, // Teensyduino / VOTI
+];
+
+let port = null, reader = null, keepReading = false, manuallyDisconnected = false;
+const btnConnect = document.getElementById('btnConnect');
+const banner = document.getElementById('serialBanner');
+const baudSelect = document.getElementById('baudRate');
+baudSelect.value = settings.baud;
+baudSelect.addEventListener('change', () => { settings.baud = baudSelect.value; saveSettings(); });
+
+if (!('serial' in navigator)) {
+  banner.classList.add('show');
+  btnConnect.disabled = true;
+}
+
+btnConnect.addEventListener('click', async () => {
+  if (port) { manuallyDisconnected = true; await disconnect(); return; }
+  manuallyDisconnected = false;
+  await connect({ requestNew: true });
+});
+
+async function connect({ requestNew = false, existingPort = null } = {}) {
+  try {
+    if (existingPort) port = existingPort;
+    else {
+      // Try existing authorized ports first — even on manual click —
+      // so the dialog only shows up the very first time.
+      const authorized = await navigator.serial.getPorts();
+      if (authorized.length > 0) {
+        port = pickBestPort(authorized);
+        log('Using already-authorized port', 'info');
+      } else if (requestNew) {
+        // Prompt the user, but pre-filter the list to Arduino-like devices
+        port = await navigator.serial.requestPort({ filters: ARDUINO_USB_FILTERS });
+      } else {
+        return false;
+      }
+    }
+    const baud = parseInt(settings.baud, 10);
+    await port.open({ baudRate: baud });
+    setStatus('connected', 'CONNECTED · ' + baud);
+    btnConnect.innerHTML = '<span class="dot"></span> DISCONNECT';
+    btnConnect.classList.remove('primary');
+    btnConnect.classList.add('danger');
+    log('Serial port opened at ' + baud + ' baud', 'ok');
+    const info = port.getInfo ? port.getInfo() : null;
+    if (info && info.usbVendorId) {
+      log(`Device VID 0x${info.usbVendorId.toString(16).padStart(4, '0')}` +
+          (info.usbProductId ? ` PID 0x${info.usbProductId.toString(16).padStart(4, '0')}` : ''), 'info');
+    }
+    toast('Arduino connected', 'ok');
+    keepReading = true; readLoop();
+    return true;
+  } catch (e) {
+    log('Connect failed: ' + e.message, 'err');
+    if (requestNew) toast('Connect failed: ' + e.message, 'err');
+    setStatus('error', 'ERROR'); port = null;
+    return false;
+  }
+}
+
+// When multiple ports are authorized, prefer the one most likely to be an Arduino.
+function pickBestPort(ports) {
+  if (ports.length === 1) return ports[0];
+  // Score by how "Arduino-like" the VID is — known vendors first
+  const knownVids = new Set(ARDUINO_USB_FILTERS.map(f => f.usbVendorId));
+  const scored = ports.map(p => {
+    const info = p.getInfo ? p.getInfo() : {};
+    const score = knownVids.has(info.usbVendorId) ? 1 : 0;
+    return { p, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].p;
+}
+
+async function disconnect() {
+  keepReading = false;
+  try {
+    if (reader) { try { await reader.cancel(); } catch (_) {} try { reader.releaseLock(); } catch (_) {} reader = null; }
+    if (port) { try { await port.close(); } catch (_) {} port = null; }
+    setStatus('', 'DISCONNECTED');
+    btnConnect.innerHTML = '<span class="dot"></span> CONNECT TO ARDUINO';
+    btnConnect.classList.add('primary'); btnConnect.classList.remove('danger');
+    log('Disconnected', 'info');
+  } catch (e) { log('Disconnect error: ' + e.message, 'err'); }
+}
+
+async function readLoop() {
+  const decoder = new TextDecoderStream();
+  const readable = port.readable.pipeThrough(decoder);
+  reader = readable.getReader();
+  let lastActivity = Date.now();
+  const idleTimer = setInterval(() => {
+    if (Date.now() - lastActivity > 1500 && statusEl.classList.contains('receiving')) {
+      setStatus('connected', 'CONNECTED · idle');
+    }
+  }, 500);
+  try {
+    while (keepReading) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (value) {
+        stats.bytes += value.length; updateStats();
+        lastActivity = Date.now();
+        setStatus('receiving', 'RECEIVING…');
+        ingestText(value);
+      }
+    }
+  } catch (e) { if (keepReading) log('Read error: ' + e.message, 'err'); }
+  finally {
+    clearInterval(idleTimer);
+    if (reader) { try { reader.releaseLock(); } catch (_) {} reader = null; }
+  }
+}
+
+if ('serial' in navigator) {
+  window.addEventListener('load', async () => {
+    if (!settings.autoConnect) return;
+    setTimeout(async () => {
+      if (!port) {
+        const ok = await connect({ requestNew: false });
+        if (ok) log('Auto-reconnected to remembered device', 'ok');
+      }
+    }, 300);
+  });
+  navigator.serial.addEventListener('connect', async (e) => {
+    log('Device plugged in', 'info');
+    if (settings.autoConnect && !port && !manuallyDisconnected) {
+      const ok = await connect({ existingPort: e.target });
+      if (ok) toast('Auto-connected', 'ok');
+    }
+  });
+  navigator.serial.addEventListener('disconnect', async (e) => {
+    log('Device unplugged', 'info');
+    if (port && e.target === port) {
+      keepReading = false;
+      try { await reader?.cancel(); } catch (_) {}
+      try { reader?.releaseLock(); } catch (_) {}
+      reader = null;
+      try { await port.close(); } catch (_) {}
+      port = null;
+      setStatus('', 'DISCONNECTED');
+      btnConnect.innerHTML = '<span class="dot"></span> CONNECT TO ARDUINO';
+      btnConnect.classList.add('primary'); btnConnect.classList.remove('danger');
+      toast('Arduino unplugged', 'info');
+    }
+  });
+}
+
+bindSwitch('swAutoConnect', 'autoConnect');
+bindSwitch('swAutoDownload', 'autoDownload');
+bindSwitch('swSound', 'sound');
+
+function ingestText(chunk) {
+  serialBuffer += chunk;
+  const lines = serialBuffer.split(/\r?\n/);
+  serialBuffer = lines.pop();
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    if (trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('!')) continue;
+    const tokens = trimmed.match(/\b[0-9a-fA-F]{2}\b/g);
+    if (tokens && tokens.length > 0) for (const tk of tokens) byteStream.push(parseInt(tk, 16));
+  }
+  if (byteStream.length >= 10) {
+    const remainder = parsePacketsFromBytes(new Uint8Array(byteStream));
+    byteStream = remainder;
+  }
+}
+
+/* =========================================================================
+   MANUAL HEX & FILE
+   ========================================================================= */
+document.getElementById('btnDecodeHex').addEventListener('click', () => {
+  const txt = document.getElementById('hexInput').value;
+  if (!txt.trim()) { toast('Paste some hex first', 'err'); return; }
+  decodeHexBlob(txt);
+});
+document.getElementById('btnLoadFile').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const text = await file.text();
+  document.getElementById('hexInput').value = text;
+  decodeHexBlob(text);
+});
+
+function decodeHexBlob(txt) {
+  log(`Decoding hex (${txt.length} chars)…`, 'info');
+  const bytes = hexToBytes(txt);
+  stats.bytes += bytes.length; updateStats();
+  tileBuffer = [];
+  const remainder = parsePacketsFromBytes(bytes);
+  if (tileBuffer.length > 0) {
+    log(`No PRINT marker, finalizing ${tileBuffer.length} tiles anyway`, 'info');
+    finalizeImage(tileBuffer); tileBuffer = [];
+  }
+  log(`Decode complete · ${remainder.length} bytes unconsumed`, 'ok');
+}
+
+/* =========================================================================
+   DRAG & DROP
+   ========================================================================= */
+const dropOverlay = document.getElementById('dropOverlay');
+let dragCount = 0;
+window.addEventListener('dragenter', (e) => { e.preventDefault(); dragCount++; dropOverlay.classList.add('show'); });
+window.addEventListener('dragleave', (e) => { e.preventDefault(); dragCount--; if (dragCount <= 0) { dropOverlay.classList.remove('show'); dragCount = 0; } });
+window.addEventListener('dragover', (e) => e.preventDefault());
+window.addEventListener('drop', async (e) => {
+  e.preventDefault(); dragCount = 0; dropOverlay.classList.remove('show');
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const text = await file.text();
+  document.getElementById('hexInput').value = text;
+  decodeHexBlob(text);
+});
+
+// Init
+updateStats();
+renderGallery();
+log('GBP Download ready', 'ok');
+log('Tip: drop a .txt hex capture to decode it', 'info');
+</script>
+</body>
+</html>
