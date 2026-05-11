@@ -1,67 +1,104 @@
-# GBP Downloader
+<div align="center">
 
-A single-file web app to **receive and save photos from your Game Boy Camera** via an Arduino running the Game Boy Printer Emulator firmware.
+# 🎮 GBP-Downloader
+
+### Receive Game Boy Camera photos. Flash the firmware. All in your browser.
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
+[![GitHub Pages](https://img.shields.io/badge/demo-live-brightgreen.svg)](https://hexlions.github.io/GBP-Downloader/gbp_downloader.html)
+[![Web Serial](https://img.shields.io/badge/Web%20Serial-API-orange.svg)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API)
+[![No Install](https://img.shields.io/badge/install-not%20required-success.svg)](#)
+
+**🌐 [Open the app →](https://hexlions.github.io/GBP-Downloader/gbp_downloader.html)**
+
+</div>
+
+---
+
+## 🤔 What is this?
+
+Two single-page web tools for the **Game Boy Printer Emulator** ecosystem. No installation, no build step, no `avrdude`, no Arduino IDE. Just open the page, plug in your Arduino, and go.
+
+| 📥 Downloader | ⚡ Flasher |
+|:---:|:---:|
+| Receive photos from your Game Boy Camera | Flash the GBP Emulator firmware |
+| Decodes 2bpp tile data → PNG | STK500v1 protocol over Web Serial |
+| Export single PNG or ZIP | Works on Arduino Nano / Uno |
+
+---
+
+## ✨ Features
+
+- 🚀 **Zero install** — runs entirely in the browser
+- 🔌 **Web Serial** — direct USB communication, no drivers needed
+- 📦 **Offline-first** — load once, works without internet
+- 🖼️ **Native PNG export** — single photos or batch ZIP
+- 🛠️ **Browser-based flasher** — no Arduino IDE required
+- 🎨 **DMG-themed UI** — green-tinted nostalgia included
+
+---
+
+## 🚀 Quick Start
+
+### What you need
+
+- 🌐 A Chromium browser (Chrome, Edge, Brave, Opera, Arc...)
+- 🤖 An Arduino Nano or Uno
+- 🎮 A Game Boy + Link Cable wired to the Arduino
+- 📷 A Game Boy Camera (or any printable GB game)
+
+### Step-by-step
 
 ```
-┌──────────────┐
-│  ░░░░░░░░░░  │
-│  ░░GAMEBOY░░ │     open gbp_downloader.html in Chrome / Edge
-│  ░░░░░░░░░░  │     connect Arduino → press print → save photos
-│  ▓▓ ▓▓  ◊ ◊  │
-└──────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  1. ⚡  Open the FLASHER page                            │
+│  2. 🔌 Plug in the Arduino via USB                      │
+│  3. 📂 Select the firmware .hex file → click FLASH       │
+│  4. 🎮 Connect Game Boy to Arduino via Link Cable        │
+│  5. 📥 Open the DOWNLOADER page → click Connect          │
+│  6. 🖨️  Print from the Game Boy                          │
+│  7. 🖼️  Save photos as PNG or download all as ZIP        │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## Features
+---
 
-- Connects to your Arduino over **Web Serial** (Chrome / Edge / Opera, desktop only)
-- Decodes the V3 raw packet stream with **RLE decompression** (Pokémon TCG and other compressed-mode games)
-- 8 selectable palettes — **BGB** default, DMG, BW, Pocket, Sepia, Noir, Ice, Burn
-- **Auto-connect** to remembered devices on page load and on cable plug-in
-- **Auto-download** PNGs on every print (optional), camera-shutter sound
-- Export 1× / 2× / 4× / 8× PNGs or batch **ZIP** the whole gallery
-- Drag & drop `.txt` / `.log` hex captures for offline decoding
-- Zero dependencies — single HTML file, works fully offline
+## 📁 Project structure
 
-## Quick start
-
-```bash
-git clone https://github.com/HexLions/gbp-downloader.git
-# open index.html in Chrome / Edge / Opera
+```
+GBP-Downloader/
+├── gbp_downloader.html    ← receive & decode photos
+├── gbp_flasher.html       ← flash firmware in-browser
+├── index.html             ← redirect to downloader
+├── README.md
+├── LICENSE                ← GPL-3.0
+└── .gitignore
 ```
 
-Or use the live GitHub Pages version:
-> https://hexlions.github.io/gbp-downloader/
+---
 
-## Setup
+## 🙏 Credits
 
-1. Flash your Arduino with the [Game Boy Printer Emulator firmware](https://github.com/mofosyne/arduino-gameboy-printer-emulator)
-2. Wire the Arduino to a Game Boy link cable (pinout in the upstream README)
-3. Open `gbp_downloader.html`, click **CONNECT TO ARDUINO**
-4. Press print on your Game Boy — photos appear instantly in the gallery
+This project stands on the shoulders of an amazing open-source community:
 
-## Browser support
+- 🔧 **[mofosyne/arduino-gameboy-printer-emulator](https://github.com/mofosyne/arduino-gameboy-printer-emulator)** — the Arduino firmware that makes it all possible
+- 🖼️ **HerrZatacke**, **BjornB2**, **virtuaCode** — pioneering work on JS-based Game Boy Printer decoding
+- 📡 **STK500v1 protocol** — adapted for Web Serial flashing
 
-Requires the **Web Serial API** — available in Chrome, Edge and Opera on desktop.
-Not supported in Firefox, Safari, or any mobile browser.
+---
 
-On Linux, add your user to the `dialout` group:
-```bash
-sudo usermod -aG dialout $USER
-```
+## 📜 License
 
-## Credits
+Released under the **[GNU General Public License v3.0](./LICENSE)** — same as the upstream firmware, keeping the whole ecosystem fully open and free.
 
-The Arduino firmware this tool connects to is the work of:
+> This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-- **Brian Khuu** ([@mofosyne](https://github.com/mofosyne)) — original author & maintainer
-- **Raphaël Boichot** — protocol research, compression & fast-mode support
-- **HerrZatacke** — WebUSB integration & [gb-printer-web](https://github.com/HerrZatacke/gb-printer-web)
-- **BjornB2** & **virtuaCode** — JS decoder improvements and color palettes
-- **West McGowan** — wiring documentation
+---
 
-Firmware: <https://github.com/mofosyne/arduino-gameboy-printer-emulator> (GPL-3.0)
+<div align="center">
 
-## License
+**Made with 💚 by [HexLions](https://github.com/HexLions)** · *Florence, Italy* 🇮🇹
 
-MIT — see `LICENSE`.
-The Arduino firmware flashed to your board is GPL-3.0 © its authors (see Credits).
+*If this helped you, drop a ⭐ on the repo!*
+
+</div>
