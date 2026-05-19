@@ -87,7 +87,7 @@ GBP-Downloader/
 ├── gbp_downloader.html    ← the app (v1.5)
 ├── index.html             ← redirect to downloader
 ├── README.md
-├── LICENSE                ← MIT
+├── LICENSE                ← GPL-3.0
 └── .gitignore
 ```
 
