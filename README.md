@@ -1,13 +1,13 @@
 <div align="center">
 
 # 🎮 GBP-Downloader
-
 ### Receive Game Boy Camera photos straight in your browser.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](./LICENSE)
 [![GitHub Pages](https://img.shields.io/badge/demo-live-brightgreen.svg)](https://hexlions.github.io/GBP-Downloader/gbp_downloader.html)
 [![Web Serial](https://img.shields.io/badge/Web%20Serial-API-orange.svg)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Serial_API)
 [![No Install](https://img.shields.io/badge/install-not%20required-success.svg)](#)
+[![Version](https://img.shields.io/badge/version-1.5-purple.svg)](#)
 
 **🌐 [Open the app →](https://hexlions.github.io/GBP-Downloader/gbp_downloader.html)**
 
@@ -23,11 +23,15 @@ A single-page web tool for receiving photos from the **Game Boy Printer Emulator
 
 ## ✨ Features
 
-- 🚀 **Zero install** — runs entirely in the browser
+- 🚀 **Zero install** — runs entirely in the browser, single HTML file
 - 🔌 **Web Serial** — direct USB communication, no drivers needed
 - 📦 **Offline-first** — load once, works without internet
-- 🖼️ **Native PNG export** — single photos or batch ZIP
-- 🎨 **DMG-themed UI** — green-tinted nostalgia included
+- 🖼️ **Native PNG export** — single photos or batch ZIP (1× / 2× / 4× / 8×)
+- 🎨 **22 palettes** — emulators, hardware-accurate, GBC modes, community favorites, and classics
+- 🖌️ **Custom palette** — paste any palletizer string (`#aaa #bbb #ccc #ddd palletizer Name`)
+- 🔲 **Dithering** — Bayer 4×4 ordered dither for smoother gradients
+- 📐 **Gamma correction** — γ=2.2 curve to simulate the real DMG screen response
+- 🕹️ **DMG-themed UI** — grey plastic shell, purple DOT MATRIX stripe, magenta buttons
 
 ---
 
@@ -35,8 +39,8 @@ A single-page web tool for receiving photos from the **Game Boy Printer Emulator
 
 ### What you need
 
-- 🌐 A Chromium browser (Chrome, Edge, Brave, Opera, Arc...)
-- 🤖 An Arduino Nano or Uno with the [GBP Emulator firmware](https://github.com/mofosyne/arduino-gameboy-printer-emulator) already flashed
+- 🌐 A Chromium browser (Chrome, Edge, Brave, Opera, Arc…)
+- 🤖 An Arduino Nano or Uno with the [GBP Emulator firmware](https://github.com/mofosyne/arduino-gameboy-printer-emulator) flashed
 - 🎮 A Game Boy + Link Cable wired to the Arduino
 - 📷 A Game Boy Camera (or any printable GB game)
 
@@ -56,14 +60,34 @@ A single-page web tool for receiving photos from the **Game Boy Printer Emulator
 
 ---
 
+## 🎨 Palettes
+
+22 palettes organised in 5 groups:
+
+| Group | Palettes |
+|---|---|
+| **Emulators** | BGB, DMG, SameBoy, Gambatte |
+| **Hardware accurate** | Accurate (DMG-01 sampled), NSO, Pocket, GB Light |
+| **GBC color modes** | GBC Green, GBC Red, GBC Blue, GBC Gray |
+| **Community** | Kirokaze, Mist, Wishes, Hollow, 2-Bit |
+| **Classic** | B&W, Sepia, Noir, Ice, Burn |
+
+You can also paste any **palletizer string** directly in the sidebar to create a custom palette:
+
+```
+#dbf4b4 #abc396 #7b9278 #4c625a palletizer My Custom Palette
+```
+
+---
+
 ## 📁 Project structure
 
 ```
 GBP-Downloader/
-├── gbp_downloader.html    ← the app
+├── gbp_downloader.html    ← the app (v1.5)
 ├── index.html             ← redirect to downloader
 ├── README.md
-├── LICENSE                ← GPL-3.0
+├── LICENSE                ← MIT
 └── .gitignore
 ```
 
@@ -75,6 +99,8 @@ This project stands on the shoulders of an amazing open-source community:
 
 - 🔧 **[mofosyne/arduino-gameboy-printer-emulator](https://github.com/mofosyne/arduino-gameboy-printer-emulator)** — the Arduino firmware that makes it all possible
 - 🖼️ **HerrZatacke**, **BjornB2**, **virtuaCode** — pioneering work on JS-based Game Boy Printer decoding
+- 🎨 **Raphaël Boichot** — protocol research and compression support
+- 🗺️ **West McGowan** — wiring documentation
 
 ---
 
