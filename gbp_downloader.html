@@ -4,7 +4,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNiIgZmlsbD0iI2M0YzFiNCIvPjxyZWN0IHg9IjYiIHk9IjUiIHdpZHRoPSIyMCIgaGVpZ2h0PSIxNiIgcng9IjIiIGZpbGw9IiMyYjJhMjYiLz48cmVjdCB4PSI5IiB5PSI4IiB3aWR0aD0iMTQiIGhlaWdodD0iMTAiIHJ4PSIxIiBmaWxsPSIjOWJiYzBmIi8+PGxpbmUgeDE9IjkiIHkxPSI5LjUiIHgyPSIyMyIgeTI9IjkuNSIgc3Ryb2tlPSIjOGJhYzBmIiBzdHJva2Utd2lkdGg9IjAuOCIvPjxsaW5lIHgxPSI5IiB5MT0iMTEuNSIgeDI9IjIzIiB5Mj0iMTEuNSIgc3Ryb2tlPSIjOGJhYzBmIiBzdHJva2Utd2lkdGg9IjAuOCIvPjxsaW5lIHgxPSI5IiB5MT0iMTMuNSIgeDI9IjIzIiB5Mj0iMTMuNSIgc3Ryb2tlPSIjOGJhYzBmIiBzdHJva2Utd2lkdGg9IjAuOCIvPjxsaW5lIHgxPSI5IiB5MT0iMTUuNSIgeDI9IjIzIiB5Mj0iMTUuNSIgc3Ryb2tlPSIjOGJhYzBmIiBzdHJva2Utd2lkdGg9IjAuOCIvPjxyZWN0IHg9IjciIHk9IjI0IiB3aWR0aD0iNiIgaGVpZ2h0PSI1IiByeD0iMyIgZmlsbD0iI2E3MmYzZSIvPjxyZWN0IHg9IjE5IiB5PSIyNCIgd2lkdGg9IjYiIGhlaWdodD0iNSIgcng9IjMiIGZpbGw9IiNhNzJmM2UiLz48Y2lyY2xlIGN4PSI0IiBjeT0iOCIgcj0iMiIgZmlsbD0iI2U2Mzk0NiIvPjwvc3ZnPg==">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GBP Downloader — Game Boy Printer</title>
+<title>GBP Downloader v1.5 — Game Boy Printer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -369,7 +369,12 @@
 
   /* ---------- Palette swatches ---------- */
   .palette-row {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 2px;
   }
   .palette-swatch {
     cursor: pointer;
@@ -814,7 +819,164 @@
     border-bottom: 2px solid currentColor;
   }
 
-  /* Big "PRESS PRINT" call-to-action below empty state */
+  /* ---------- Custom palette ---------- */
+  .custom-pal-wrap textarea {
+    width: 100%;
+    background: var(--bg);
+    color: var(--ink);
+    border: 2px solid var(--ink);
+    padding: 8px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    outline: none;
+    resize: vertical;
+    min-height: 54px;
+  }
+  .custom-pal-wrap textarea:focus { background: #fff; }
+  .custom-pal-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    border: 2px solid var(--ink);
+    background: var(--bg);
+    padding: 6px 10px;
+  }
+  .cpal-strip {
+    display: flex;
+    width: 80px;
+    height: 16px;
+    border: 1px solid var(--ink);
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .cpal-strip span { flex: 1; }
+  .cpal-name {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ink-mid);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ---------- Render options row (always visible) ---------- */
+  .render-opts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 8px;
+    align-items: center;
+    background: var(--bg);
+    border: 2px solid var(--ink);
+    padding: 8px 10px;
+    margin-bottom: 0;
+  }
+  .render-opt .label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--ink);
+  }
+  .render-opt-scale .scale-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+  }
+  .render-opt-scale .scale-row button {
+    background: var(--bg-deep);
+    border: 1.5px solid var(--ink);
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 5px 0;
+    cursor: pointer;
+  }
+  .render-opt-scale .scale-row button.active {
+    background: var(--shell-ink);
+    color: var(--shell-light);
+  }
+
+
+
+  /* ---------- Palette editor ---------- */
+  .pal-editor { display: flex; flex-direction: column; gap: 0; }
+  .pal-pickers {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+    margin-bottom: 6px;
+  }
+  .picker-slot { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .picker-slot label {
+    font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+    color: var(--ink-mid); text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .picker-slot input[type="color"] {
+    width: 100%; height: 28px; padding: 0; border: 2px solid var(--ink);
+    cursor: pointer; background: none;
+  }
+  .picker-preview {
+    width: 100%; height: 8px; border: 1px solid var(--line-soft);
+  }
+  .pal-editor-name-row {
+    display: flex; gap: 6px; align-items: center; margin-bottom: 0;
+  }
+  .pal-editor-name-row input[type="text"] {
+    background: var(--bg); color: var(--ink); border: 2px solid var(--ink);
+    padding: 6px 8px; font-family: var(--font-mono); font-size: 11px; outline: none;
+  }
+  .pal-editor-name-row input[type="text"]:focus { background: #fff; }
+
+  /* ---------- Palette library ---------- */
+  .pal-library {
+    display: flex; flex-direction: column; gap: 4px;
+    max-height: 180px; overflow-y: auto;
+  }
+  .pal-lib-item {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--bg); border: 1.5px solid var(--line-soft);
+    padding: 4px 6px; cursor: pointer;
+    transition: border-color 0.1s ease;
+  }
+  .pal-lib-item:hover { border-color: var(--ink); }
+  .pal-lib-item.active { border-color: var(--accent); border-width: 2px; }
+  .pal-lib-strip { display: flex; width: 48px; height: 12px; flex-shrink: 0; border: 1px solid var(--ink); overflow: hidden; }
+  .pal-lib-strip span { flex: 1; }
+  .pal-lib-name { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--ink); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pal-lib-actions { display: flex; gap: 2px; flex-shrink: 0; }
+  .pal-lib-btn {
+    background: transparent; border: none; color: var(--ink-faint);
+    font-family: var(--font-mono); font-size: 9px; cursor: pointer; padding: 2px 4px;
+    font-weight: 700; text-transform: uppercase;
+  }
+  .pal-lib-btn:hover { color: var(--ink); }
+  .pal-lib-btn.del:hover { color: var(--danger); }
+  .pal-lib-empty {
+    font-family: var(--font-mono); font-size: 10px; color: var(--ink-faint);
+    text-align: center; padding: 12px 0;
+  }
+
+  /* ---------- Custom palette ---------- */
+  .custom-pal-wrap textarea {
+    width: 100%; background: var(--bg); color: var(--ink);
+    border: 2px solid var(--ink); padding: 8px 10px;
+    font-family: var(--font-mono); font-size: 11px;
+    outline: none; resize: vertical; min-height: 54px;
+  }
+  .custom-pal-wrap textarea:focus { background: #fff; }
+  .custom-pal-preview {
+    display: flex; align-items: center; gap: 8px; margin-top: 4px;
+    border: 2px solid var(--ink); background: var(--bg); padding: 5px 8px;
+  }
+  .cpal-strip { display: flex; width: 64px; height: 14px; border: 1px solid var(--ink); flex-shrink: 0; overflow: hidden; }
+  .cpal-strip span { flex: 1; }
+  .cpal-name { font-family: var(--font-mono); font-size: 10px; font-weight: 700; color: var(--ink-mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+
+  /* ---------- Press print ---------- */
   .press-print {
     font-family: var(--font-display);
     font-size: 11px;
@@ -843,7 +1005,7 @@
       </div>
       <div>
         <h1>GBP DOWNLOAD</h1>
-        <div class="sub">Game Boy Printer photo receiver · </div>
+        <div class="sub">Game Boy Printer photo receiver</div>
       </div>
     </div>
     <div class="top-actions">
@@ -910,7 +1072,7 @@
         </div>
       </section>
 
-      <section class="panel" style="margin-top: 20px;">
+            <section class="panel" style="margin-top: 20px;">
         <h2>Render Settings</h2>
         <div class="panel-body">
           <div class="field">
@@ -925,6 +1087,31 @@
               <button data-scale="4">4×</button>
               <button data-scale="8">8×</button>
             </div>
+          </div>
+          <div class="field">
+            <div class="switch-row">
+              <div>
+                <div class="label">Dithering</div>
+                <div class="hint">Bayer 4×4 ordered dither</div>
+              </div>
+              <div class="switch" id="swDither" role="switch"></div>
+            </div>
+            <div class="switch-row" style="border:none;">
+              <div>
+                <div class="label">Gamma correction</div>
+                <div class="hint">DMG screen response curve</div>
+              </div>
+              <div class="switch" id="swGamma" role="switch"></div>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Custom palette</label>
+            <textarea id="customPalInput" spellcheck="false" placeholder="#e0f8d0 #88c070 #346856 #081820 palletizer My Palette&#10;or just: #e0f8d0 #88c070 #346856 #081820 Name" style="min-height:58px;font-size:11px;resize:vertical;"></textarea>
+            <div style="display:flex;gap:6px;margin-top:6px;">
+              <div id="customPalPreview" style="display:flex;flex:1;height:28px;border:2px solid var(--ink);overflow:hidden;"></div>
+              <button class="btn" id="btnApplyCustomPal" type="button" style="flex-shrink:0;">APPLY</button>
+            </div>
+            <div id="customPalName" style="font-family:var(--font-mono);font-size:9px;color:var(--ink-faint);margin-top:4px;height:14px;"></div>
           </div>
         </div>
       </section>
@@ -983,7 +1170,7 @@
   </div>
 
   <footer>
-    <div>GBP Downloader · single-page · works fully offline · v1.0</div>
+    <div>GBP Downloader · single-page · works fully offline · v1.5</div>
   </footer>
 </div>
 
@@ -1009,7 +1196,7 @@
 
 <script>
 /* =========================================================================
-   GBP DOWNLOAD — receives photos from the Arduino Game Boy Printer Emulator,
+   GBP DOWNLOADER v1.5 — receives photos from the Arduino Game Boy Printer Emulator,
    decodes the V3 raw packet stream, and renders them as classic DMG images.
    
    ========================================================================= */
@@ -1019,7 +1206,7 @@ const SETTINGS_KEY = 'gbp_download_settings_v1';
 const settings = (() => {
   const defaults = {
     autoConnect: true, autoDownload: false, sound: true,
-    palette: 'bgb', scale: 1, baud: '115200',
+    palette: 'bgb', scale: 1, baud: '115200', dither: false, gamma: false,
   };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -1065,35 +1252,138 @@ function toast(msg, kind = 'info', ms = 2400) {
 
 // ---------- Palettes (light → dark, 4 shades) ----------
 const PALETTES = {
-  dmg:    { name: 'DMG',     colors: ['#9bbc0f', '#8bac0f', '#306230', '#0f380f'] },
-  bw:     { name: 'BW',      colors: ['#ffffff', '#aaaaaa', '#555555', '#000000'] },
-  pocket: { name: 'POCKET',  colors: ['#c4cfa1', '#8b956d', '#4d533c', '#1f1f1f'] },
-  bgb:    { name: 'BGB',     colors: ['#e0f8d0', '#88c070', '#346856', '#081820'] },
-  sepia:  { name: 'SEPIA',   colors: ['#fff4e0', '#d6b48c', '#8b5a2b', '#3a1f0a'] },
-  noir:   { name: 'NOIR',    colors: ['#f4d35e', '#ee964b', '#9c1d1d', '#1d201f'] },
-  ice:    { name: 'ICE',     colors: ['#eaf6ff', '#87ceeb', '#3b6ea5', '#0a1f3a'] },
-  burn:   { name: 'BURN',    colors: ['#ffefb0', '#ff7a59', '#7a1f1f', '#1a0d0d'] },
+  // ── Emulators ──
+  bgb:       { name: 'BGB',       colors: ['#e0f8d0','#88c070','#346856','#081820'] },
+  dmg:       { name: 'DMG',       colors: ['#9bbc0f','#8bac0f','#306230','#0f380f'] },
+  sameboy:   { name: 'SAMEBOY',   colors: ['#d8e8a0','#a8c060','#507818','#001808'] },
+  gambatte:  { name: 'GAMBATTE',  colors: ['#8ebe74','#4e7a4e','#2a4a2a','#1a2a1a'] },
+  // ── Hardware accurate ──
+  accurate:  { name: 'ACCURATE',  colors: ['#9a9e3f','#496b22','#0e450b','#1b2a09'] },
+  nso:       { name: 'NSO',       colors: ['#8cad28','#6c9421','#426b29','#214231'] },
+  pocket:    { name: 'POCKET',    colors: ['#c4cfa1','#8b956d','#4d533c','#1f1f1f'] },
+  gblight:   { name: 'GB LIGHT',  colors: ['#9fbdb9','#7fa7a7','#456b82','#0e294b'] },
+  // ── GBC color modes ──
+  gbc_green: { name: 'GBC GRN',   colors: ['#b5c86c','#6b8c42','#3b5229','#1a2a00'] },
+  gbc_red:   { name: 'GBC RED',   colors: ['#f8b8a0','#e05850','#901818','#300000'] },
+  gbc_blue:  { name: 'GBC BLU',   colors: ['#a8c8e8','#5878b8','#184888','#001030'] },
+  gbc_gray:  { name: 'GBC GRY',   colors: ['#f0f0f0','#a8a8a8','#585858','#101010'] },
+  // ── Community favorites ──
+  kirokaze:  { name: 'KIROKAZE',  colors: ['#e2f3e4','#94e344','#46878f','#332c50'] },
+  mist:      { name: 'MIST',      colors: ['#c4f0c2','#5ab9a8','#1e606e','#2d1b00'] },
+  wishes:    { name: 'WISHES',    colors: ['#8be5ff','#608fcf','#7550e8','#622e4c'] },
+  hollow:    { name: 'HOLLOW',    colors: ['#e8e8d0','#b8a080','#785840','#281818'] },
+  twobit:    { name: '2BIT',      colors: ['#ffffc8','#b4d24a','#3a7020','#0e1e0e'] },
+  // ── Classic ──
+  bw:        { name: 'B&W',       colors: ['#ffffff','#aaaaaa','#555555','#000000'] },
+  sepia:     { name: 'SEPIA',     colors: ['#fff4e0','#d6b48c','#8b5a2b','#3a1f0a'] },
+  noir:      { name: 'NOIR',      colors: ['#f4d35e','#ee964b','#9c1d1d','#1d201f'] },
+  ice:       { name: 'ICE',       colors: ['#eaf6ff','#87ceeb','#3b6ea5','#0a1f3a'] },
+  burn:      { name: 'BURN',      colors: ['#ffefb0','#ff7a59','#7a1f1f','#1a0d0d'] },
 };
 
-let activePalette = settings.palette;
+const PAL_GROUPS = [
+  { label: 'EMULATORS', keys: ['bgb','dmg','sameboy','gambatte'] },
+  { label: 'HARDWARE',  keys: ['accurate','nso','pocket','gblight'] },
+  { label: 'GBC MODES', keys: ['gbc_green','gbc_red','gbc_blue','gbc_gray'] },
+  { label: 'COMMUNITY', keys: ['kirokaze','mist','wishes','hollow','twobit'] },
+  { label: 'CLASSIC',   keys: ['bw','sepia','noir','ice','burn'] },
+];
+
+let activePalette = settings.palette in PALETTES ? settings.palette : 'bgb';
 let activeScale = settings.scale;
 
 const paletteRow = document.getElementById('paletteRow');
 function renderPaletteSwatches() {
   paletteRow.innerHTML = '';
-  Object.entries(PALETTES).forEach(([key, p]) => {
-    const sw = document.createElement('div');
-    sw.className = 'palette-swatch' + (key === activePalette ? ' active' : '');
-    sw.title = p.name;
-    sw.innerHTML = `<div class="row">${p.colors.map(c => `<span style="background:${c}"></span>`).join('')}</div><div class="name">${p.name}</div>`;
-    sw.addEventListener('click', () => {
-      activePalette = key; settings.palette = key; saveSettings();
-      renderPaletteSwatches(); rerenderAllImages();
+  PAL_GROUPS.forEach(group => {
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'grid-column:1/-1;font-family:var(--font-mono);font-size:8px;font-weight:700;color:var(--ink-faint);letter-spacing:1.5px;text-transform:uppercase;padding:4px 0 2px;border-bottom:1px solid var(--line-soft);margin-top:4px;';
+    lbl.textContent = group.label;
+    paletteRow.appendChild(lbl);
+    group.keys.forEach(key => {
+      const p = PALETTES[key]; if (!p) return;
+      const sw = document.createElement('div');
+      sw.className = 'palette-swatch' + (key === activePalette ? ' active' : '');
+      sw.title = p.name;
+      sw.innerHTML = '<div class="row">' + p.colors.map(c => `<span style="background:${c}"></span>`).join('') + '</div><div class="name">' + p.name + '</div>';
+      sw.addEventListener('click', () => {
+        activePalette = key; settings.palette = key; saveSettings();
+        renderPaletteSwatches(); rerenderAllImages();
+      });
+      paletteRow.appendChild(sw);
     });
-    paletteRow.appendChild(sw);
   });
 }
 renderPaletteSwatches();
+
+/* =========================================================================
+   CUSTOM PALETTE — palletizer format parser
+   Accepts:
+     #aaa #bbb #ccc #ddd palletizer Name   (upstream format)
+     #aaa #bbb #ccc #ddd Name              (plain hex + name)
+     #aaa #bbb #ccc #ddd #FFFFFF00 palletizer Name  (with transparent 5th)
+   ========================================================================= */
+function parsePalletizer(str) {
+  if (!str || !str.trim()) return null;
+  const tokens = str.match(/#[0-9a-fA-F]{3,8}/g) || [];
+  const colors = tokens.map(h => {
+    const s = h.replace('#','');
+    if (s.length === 8 && parseInt(s.substr(6,2),16) === 0) return null;
+    if (s.length === 8) return '#'+s.substr(0,6);
+    if (s.length === 6) return '#'+s;
+    if (s.length === 3) return '#'+s[0]+s[0]+s[1]+s[1]+s[2]+s[2];
+    return null;
+  }).filter(Boolean);
+  if (colors.length < 4) return null;
+  const nameMatch = str.match(/palletizer\s+(.+)/i);
+  if (nameMatch) return { name: nameMatch[1].trim(), colors: colors.slice(0,4) };
+  const afterHex = str.replace(/#[0-9a-fA-F]{3,8}/g,'').replace(/\s+/g,' ').trim();
+  return { name: afterHex || 'Custom', colors: colors.slice(0,4) };
+}
+
+function updateCustomPalPreview(str) {
+  const preview = document.getElementById('customPalPreview');
+  const nameEl  = document.getElementById('customPalName');
+  const result  = parsePalletizer(str);
+  if (result) {
+    preview.innerHTML = result.colors.map(c => `<span style="background:${c};flex:1;"></span>`).join('');
+    nameEl.textContent = result.name;
+    nameEl.style.color = 'var(--ink-mid)';
+  } else {
+    preview.innerHTML = '';
+    nameEl.textContent = str.includes('#') ? 'need 4 hex colors' : '';
+    nameEl.style.color = 'var(--ink-faint)';
+  }
+  return result;
+}
+
+document.getElementById('customPalInput').addEventListener('input', e => {
+  updateCustomPalPreview(e.target.value);
+});
+
+document.getElementById('btnApplyCustomPal').addEventListener('click', () => {
+  const str = document.getElementById('customPalInput').value.trim();
+  const result = parsePalletizer(str);
+  if (!result) { toast('Need 4 hex colors (e.g. #fff #aaa #555 #000 Name)', 'err'); return; }
+  PALETTES['custom'] = result;
+  activePalette = 'custom';
+  settings.palette = 'custom';
+  saveSettings();
+  renderPaletteSwatches();
+  rerenderAllImages();
+  toast('"' + result.name + '" applied', 'ok');
+});
+
+// Restore custom palette from previous session
+(() => {
+  const saved = settings.palette;
+  if (saved === 'custom') {
+    // palette was custom but PALETTES['custom'] doesn't exist yet —
+    // reset to bgb until user re-applies
+    activePalette = 'bgb';
+    settings.palette = 'bgb';
+  }
+})();
 
 document.getElementById('scaleRow').addEventListener('click', (e) => {
   if (e.target.tagName === 'BUTTON') {
@@ -1129,9 +1419,6 @@ function setStatus(state, text) {
 
 /* =========================================================================
    GAME BOY PRINTER PACKET DECODER (V3 raw stream)
-     88 33 CMD COMP LEN_L LEN_H [data...] CKSUM_L CKSUM_H DEV_ID STATUS
-   Commands: 0x01 INIT, 0x02 PRINT, 0x04 DATA, 0x0F INQUIRY
-   Compression: 0=none, 1=RLE
    ========================================================================= */
 
 const CMD = { INIT: 0x01, PRINT: 0x02, DATA: 0x04, INQUIRY: 0x0F };
@@ -1218,7 +1505,6 @@ function handlePacket(command, payload) {
 
 /* =========================================================================
    IMAGE FINALIZATION & RENDERING
-   160px wide, tiles 8×8 in 20-tile bands × 8 px tall.
    ========================================================================= */
 
 function tilesToImageData(tiles) {
@@ -1243,7 +1529,12 @@ function tilesToImageData(tiles) {
   return { width, height, idx };
 }
 
+// Bayer 4×4 threshold matrix for ordered dithering
+const BAYER4 = [0,8,2,10, 12,4,14,6, 3,11,1,9, 15,7,13,5];
+
 function indexToCanvas(imgData, palette, scale = 1) {
+  const dither = !!settings.dither;
+  const gamma  = !!settings.gamma;
   const { width, height, idx } = imgData;
   const cvs = document.createElement('canvas');
   cvs.width = width * scale; cvs.height = height * scale;
@@ -1253,10 +1544,24 @@ function indexToCanvas(imgData, palette, scale = 1) {
   tmp.width = width; tmp.height = height;
   const tctx = tmp.getContext('2d');
   const im = tctx.createImageData(width, height);
-  const colors = palette.colors.map(hexToRgb);
-  for (let p = 0; p < idx.length; p++) {
-    const c = colors[idx[p]];
-    im.data[p * 4] = c[0]; im.data[p * 4 + 1] = c[1]; im.data[p * 4 + 2] = c[2]; im.data[p * 4 + 3] = 255;
+  // Pre-process colors: apply gamma if needed
+  const colors = palette.colors.map(h => {
+    const [r,g,b] = hexToRgb(h);
+    if (!gamma) return [r,g,b];
+    const gc = v => Math.round(Math.pow(v/255, 2.2) * 255);
+    return [gc(r), gc(g), gc(b)];
+  });
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let i = idx[y * width + x];
+      if (dither) {
+        const t = BAYER4[(y % 4) * 4 + (x % 4)] / 16;
+        i = Math.min(3, Math.round(i + t));
+      }
+      const c = colors[Math.min(3, Math.max(0, i))];
+      const p = (y * width + x) * 4;
+      im.data[p] = c[0]; im.data[p+1] = c[1]; im.data[p+2] = c[2]; im.data[p+3] = 255;
+    }
   }
   tctx.putImageData(im, 0, 0);
   ctx.drawImage(tmp, 0, 0, cvs.width, cvs.height);
@@ -1511,20 +1816,12 @@ document.getElementById('modalCopyHex').addEventListener('click', () => {
 });
 
 /* =========================================================================
-   WEB SERIAL — connect, auto-reconnect, read loop
+   WEB SERIAL
    ========================================================================= */
-
-// Common Arduino & USB-serial chip vendor IDs.
-// Used to filter the browser's port-picker so only relevant boards appear.
 const ARDUINO_USB_FILTERS = [
-  { usbVendorId: 0x2341 }, // Arduino LLC
-  { usbVendorId: 0x2A03 }, // Arduino SA
-  { usbVendorId: 0x1A86 }, // QinHeng CH340 / CH341 (most clones)
-  { usbVendorId: 0x0403 }, // FTDI (older Nanos)
-  { usbVendorId: 0x10C4 }, // Silicon Labs CP210x
-  { usbVendorId: 0x239A }, // Adafruit
-  { usbVendorId: 0x1B4F }, // SparkFun
-  { usbVendorId: 0x16C0 }, // Teensyduino / VOTI
+  { usbVendorId: 0x2341 }, { usbVendorId: 0x2A03 }, { usbVendorId: 0x1A86 },
+  { usbVendorId: 0x0403 }, { usbVendorId: 0x10C4 }, { usbVendorId: 0x239A },
+  { usbVendorId: 0x1B4F }, { usbVendorId: 0x16C0 },
 ];
 
 let port = null, reader = null, keepReading = false, manuallyDisconnected = false;
@@ -1549,14 +1846,11 @@ async function connect({ requestNew = false, existingPort = null } = {}) {
   try {
     if (existingPort) port = existingPort;
     else {
-      // Try existing authorized ports first — even on manual click —
-      // so the dialog only shows up the very first time.
       const authorized = await navigator.serial.getPorts();
       if (authorized.length > 0) {
         port = pickBestPort(authorized);
         log('Using already-authorized port', 'info');
       } else if (requestNew) {
-        // Prompt the user, but pre-filter the list to Arduino-like devices
         port = await navigator.serial.requestPort({ filters: ARDUINO_USB_FILTERS });
       } else {
         return false;
@@ -1585,15 +1879,12 @@ async function connect({ requestNew = false, existingPort = null } = {}) {
   }
 }
 
-// When multiple ports are authorized, prefer the one most likely to be an Arduino.
 function pickBestPort(ports) {
   if (ports.length === 1) return ports[0];
-  // Score by how "Arduino-like" the VID is — known vendors first
   const knownVids = new Set(ARDUINO_USB_FILTERS.map(f => f.usbVendorId));
   const scored = ports.map(p => {
     const info = p.getInfo ? p.getInfo() : {};
-    const score = knownVids.has(info.usbVendorId) ? 1 : 0;
-    return { p, score };
+    return { p, score: knownVids.has(info.usbVendorId) ? 1 : 0 };
   });
   scored.sort((a, b) => b.score - a.score);
   return scored[0].p;
@@ -1674,6 +1965,8 @@ if ('serial' in navigator) {
 }
 
 bindSwitch('swAutoConnect', 'autoConnect');
+bindSwitch('swDither', 'dither', () => rerenderAllImages());
+bindSwitch('swGamma',  'gamma',  () => rerenderAllImages());
 bindSwitch('swAutoDownload', 'autoDownload');
 bindSwitch('swSound', 'sound');
 
